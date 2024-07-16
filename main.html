@@ -1,0 +1,134 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Polygon Creator with Three.js</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background-color: #e0f7fa;
+      display: flex;
+    }
+    canvas {
+      display: block;
+      flex-grow: 1;
+    }
+    #ui {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      padding: 20px;
+      background-color: rgba(255, 255, 255, 0.8);
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    #title {
+      font-size: 20px;
+      margin-bottom: 10px;
+      color: #00796b;
+    }
+    #instructions {
+      font-size: 14px;
+      margin-bottom: 20px;
+      color: #004d40;
+    }
+    #completeButton {
+      padding: 10px 20px;
+      background-color: #00796b;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.3s;
+    }
+    #completeButton:hover {
+      background-color: #004d40;
+    }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <div id="title">Polygon Creator</div>
+    <div id="instructions">Click to add vertices. Click "Complete" to create the polygon.</div>
+    <button id="completeButton">Complete</button>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // Set up the scene, camera, and renderer
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Move the camera back so we can see the scene
+    camera.position.z = 5;
+
+    // Array to hold the vertices
+    const vertices = [];
+
+    // Geometry and material for the points
+    const pointGeometry = new THREE.CircleGeometry(0.05, 32);
+    const pointMaterial = new THREE.MeshBasicMaterial({ color: 0xff5722 });
+
+    // Function to add a vertex
+    function addVertex(x, y) {
+      const point = new THREE.Mesh(pointGeometry, pointMaterial);
+      point.position.set(x, y, 0);
+      scene.add(point);
+      vertices.push(new THREE.Vector3(x, y, 0));
+    }
+
+    // Function to create the polygon
+    function createPolygon() {
+      const shape = new THREE.Shape(vertices);
+      const geometry = new THREE.ShapeGeometry(shape);
+      const material = new THREE.MeshBasicMaterial({ color: 0x4caf50, side: THREE.DoubleSide });
+      const polygon = new THREE.Mesh(geometry, material);
+      scene.add(polygon);
+
+      const edges = new THREE.EdgesGeometry(geometry);
+      const lineMaterial = new THREE.LineBasicMaterial({ color: 0x009688 });
+      const lines = new THREE.LineSegments(edges, lineMaterial);
+      scene.add(lines);
+    }
+
+    // Event listener for mouse click
+    window.addEventListener('click', (event) => {
+      if (isComplete) return;
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      // Convert screen coordinates to world coordinates
+      const vector = new THREE.Vector3(x, y, 0.5);
+      vector.unproject(camera);
+      const dir = vector.sub(camera.position).normalize();
+      const distance = -camera.position.z / dir.z;
+      const pos = camera.position.clone().add(dir.multiplyScalar(distance));
+
+      addVertex(pos.x, pos.y);
+    });
+
+    // Event listener for Complete button
+    let isComplete = false;
+    document.getElementById('completeButton').addEventListener('click', () => {
+      isComplete = true;
+      document.getElementById('completeButton').style.display = 'none'; // Hide the button
+      createPolygon();
+    });
+
+    // Animation loop
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
